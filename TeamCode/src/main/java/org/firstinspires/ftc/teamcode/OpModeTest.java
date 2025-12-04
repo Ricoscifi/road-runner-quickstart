@@ -1,117 +1,144 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.arcrobotics.ftclib.controller.PIDController;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
+
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 @Config
 @TeleOp(name="OpModeTest")
 public class OpModeTest extends LinearOpMode {
 
-    public DcMotorEx[] driveMotors;
+    private DcMotorEx leftFront;
+    private DcMotorEx leftBack;
+    private DcMotorEx rightFront;
+    private DcMotorEx rightBack;
 
-    public DcMotor flywheelleft;
-    public DcMotor flywheelright;
+    public DcMotorEx flywheelleft;
+    public DcMotorEx flywheelright;
 
     public DcMotor intake;
 
     public CRServo leftPrimeServo;
     public CRServo rightPrimeServo;
 
-    public static double flywheelPower;
-    public static double primeServoPower;
-    public static double intakePower;
+    public static double primeServoPower = 0;
+    public static double intakePower = 0;
 
-    double x = -gamepad1.left_stick_x;
-    double y = -gamepad1.left_stick_y;
-    double rx = gamepad1.right_stick_x;
+    //double x = -gamepad1.left_stick_x;
+    //double y = -gamepad1.left_stick_y;
+    //double rx = gamepad1.right_stick_x;
 
-    public boolean flywheel;
-    public boolean primed;
-    public boolean intaking;
-    public boolean ejecting;
+    public boolean oldCross;
+    public boolean oldTriangle;
+    public boolean oldCircle;
+    public boolean oldSquare;
 
-        public void runOpMode(){
-            while (opModeInInit() && !isStopRequested()) {
-              /*  driveMotors = new DcMotorEx[4];
-                String[] motorNames = {"fL", "fR", "bL", "bR"};
-                DcMotorSimple.Direction[] directions = {
-                        DcMotorSimple.Direction.REVERSE,
-                        DcMotorSimple.Direction.FORWARD,
-                        DcMotorSimple.Direction.REVERSE,
-                        DcMotorSimple.Direction.FORWARD
-                };
+    public boolean flywheel = false;
+    public boolean primed = false;
+    public boolean intaking = false;
+    public boolean ejecting = false;
 
-                for (int i = 0; i < 4; i++) {
-                    driveMotors[i] = hardwareMap.get(DcMotorEx.class, motorNames[i]);
-                    driveMotors[i].setDirection(directions[i]);
-                    driveMotors[i].setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-                    driveMotors[i].setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                    driveMotors[i].setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                }
+    private PIDController flywheelPID;
+    private final double p = 0.02, i = 0.00, d = 0.00045;
+    public double f = 0.125;
+    public static int targetRPM = 0;
 
-*/
-                intake = hardwareMap.get(DcMotor.class, "intake");
-                intake.setDirection(DcMotorSimple.Direction.FORWARD);
-                intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+    public void runOpMode() {
+        while (opModeInInit() && !isStopRequested()) {
 
-                flywheelleft = hardwareMap.get(DcMotor.class, "leftflywheel");
-                flywheelleft.setDirection(DcMotorSimple.Direction.FORWARD);
-                flywheelleft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            //leftFront = hardwareMap.get(DcMotorEx.class, "leftFront");
+            //leftBack = hardwareMap.get(DcMotorEx.class, "leftBack");
+            //rightFront = hardwareMap.get(DcMotorEx.class, "rightFront");
+            //rightBack = hardwareMap.get(DcMotorEx.class, "rightBack");
 
-                flywheelright = hardwareMap.get(DcMotor.class, "rightflywheel");
-                flywheelright.setDirection(DcMotorSimple.Direction.FORWARD);
-                flywheelright.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+           // leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+           // leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+           // rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+           // rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-                leftPrimeServo = hardwareMap.get(CRServo.class, "leftPrimeServo");
-                rightPrimeServo = hardwareMap.get(CRServo.class, "rightPrimeServo");
-            }
-            while (opModeIsActive() && !isStopRequested()){
+            //leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+            //leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
-                if (gamepad1.cross && !flywheel){
+            intake = hardwareMap.get(DcMotor.class, "intake");
+            intake.setDirection(DcMotorSimple.Direction.FORWARD);
+            intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+            flywheelleft = hardwareMap.get(DcMotorEx.class, "leftflywheel");
+            flywheelleft.setDirection(DcMotorSimple.Direction.REVERSE);
+            flywheelleft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+            flywheelright = hardwareMap.get(DcMotorEx.class, "rightflywheel");
+            flywheelright.setDirection(DcMotorSimple.Direction.FORWARD);
+            flywheelright.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+            flywheelPID = new PIDController(p,i,d);
+
+
+            leftPrimeServo = hardwareMap.get(CRServo.class, "leftPrimeServo");
+            rightPrimeServo = hardwareMap.get(CRServo.class, "rightPrimeServo");
+
+            telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+        }
+        while (opModeIsActive() && !isStopRequested()) {
+            setFlyWheelPower();
+
+            if (gamepad1.cross && !oldCross) {
+                if (!flywheel) {
+                    targetRPM = 13;
                     flywheel = true;
-                    flywheelleft.setPower(flywheelPower);
-                    flywheelright.setPower(flywheelPower);
-                } else if (gamepad1.cross && flywheel){
+                } else {
+                    targetRPM = 0;
                     flywheel = false;
-                    flywheelleft.setPower(0);
-                    flywheelright.setPower(0);
                 }
+            }
+                oldCross = gamepad1.cross;
 
-                    if (gamepad1.square && !primed){
-                        primed = true;
+                if (gamepad1.square && !oldSquare) {
+                    if (!primed){
                         leftPrimeServo.setPower(primeServoPower);
                         rightPrimeServo.setPower(-primeServoPower);
-                    } else if (gamepad1.square && primed){
-                        primed = false;
+                        primed = true;
+                    } else {
                         leftPrimeServo.setPower(0);
                         rightPrimeServo.setPower(0);
+                        primed = false;
+                    }
                 }
+                oldSquare = gamepad1.square;
 
-                    if (gamepad1.circle && !intaking){
-                        intaking = true;
+                if (gamepad1.circle && !oldCircle) {
+                    if (!intaking){
                         intake.setPower(intakePower);
-                    } else if (gamepad1.circle && intaking){
+                        intaking = true;
+                    } else {
+                        intake.setPower(0);
                         intaking = false;
-                        intake.setPower(0);
                     }
+                }
+                oldCircle = gamepad1.circle;
 
-                    if (gamepad1.triangle && !ejecting){
-                        ejecting = true;
+                if (gamepad1.triangle && !oldTriangle) {
+                    if (!ejecting){
                         intake.setPower(-intakePower);
-                    } else if (gamepad1.triangle && ejecting){
-                        ejecting = false;
+                        ejecting = true;
+                    } else {
                         intake.setPower(0);
+                        ejecting = false;
                     }
+                }
+                oldTriangle = gamepad1.triangle;
 
-                    /*
-                //Drive Motors
-                double powerFrontLeft = y + x + rx;
+
+               /* double powerFrontLeft = y + x + rx;
                 double powerFrontRight = y - x - rx;
                 double powerBackLeft = (y - x + rx) * -1;
                 double powerBackRight = (y + x - rx) * -1;
@@ -132,22 +159,32 @@ public class OpModeTest extends LinearOpMode {
                     powerBackRight /= max;
                 }
                 // Send calculated power to wheels
-                driveMotors[0].setPower(powerFrontLeft);
-                driveMotors[1].setPower(powerFrontRight);
-                driveMotors[2].setPower(powerBackLeft);
-                driveMotors[3].setPower(powerBackRight);
+                leftFront.setPower(powerFrontLeft);
+                rightFront.setPower(powerFrontRight);
+                leftBack.setPower(powerBackLeft);
+                rightBack.setPower(powerBackRight);
 
-                     */
-                telemetry.addData("rightMotorPower:", flywheelPower);
+                */
+
                 telemetry.addData("primed?", primed);
                 telemetry.addData("flywheel", flywheel);
+                telemetry.addData("target ", targetRPM);
                 telemetry.update();
-
             }
+        }
 
+        public void setFlyWheelPower(){
+            flywheelPID.setPID(p, i, d);
+            int flywheelRightCurrPos = flywheelright.getCurrentPosition();
+            telemetry.addData("pos ", flywheelRightCurrPos);
+            double shooter1Speed = flywheelPID.calculate(flywheelright.getVelocity(AngleUnit.RADIANS)/2 *30/Math.PI, targetRPM) + f;
+            telemetry.addData("pow ", shooter1Speed);
 
-                }
-            }
+            flywheelright.setPower(-shooter1Speed);
+            flywheelleft.setPower(-shooter1Speed);
+        }
+    }
+
 
 
 
