@@ -166,7 +166,7 @@ public class OpModeTest extends LinearOpMode {
 
                 */
 
-                telemetry.addData("primed?", primed);
+                telemetry.addData("gate?", primed);
                 telemetry.addData("flywheel", flywheel);
                 telemetry.addData("target ", targetRPM);
                 telemetry.update();
